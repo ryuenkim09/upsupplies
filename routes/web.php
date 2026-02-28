@@ -18,6 +18,7 @@ Route::get('/add-to-cart/{id}', [ItemController::class, 'addToCart'])->name('add
 Route::post('/add-to-cart/{id}', [ItemController::class, 'addToCart'])->name('cart.add');
 Route::get('/shopping-cart', [ItemController::class, 'getCart'])->name('getCart');
 Route::get('/reduce/{id}', [ItemController::class, 'getReduceByOne'])->name('reduceByOne');
+Route::post('/cart/update/{id}', [ItemController::class, 'updateCartQuantity'])->name('updateCartQuantity');
 Route::get('/remove/{id}', [ItemController::class, 'getRemoveItem'])->name('removeItem');
 Route::post('/checkout', [ItemController::class, 'postCheckout'])->name('checkout');
 Route::get('/order-history', [ItemController::class, 'orderHistory'])->name('orderHistory');

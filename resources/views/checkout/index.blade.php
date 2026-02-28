@@ -34,8 +34,60 @@
 
                 <form method="POST" action="{{ route('checkout') }}" class="mt-4">
                     @csrf
-                    
-                    <h6>Payment Method</h6>
+
+                    @php $user = auth()->user(); @endphp
+                    @if($user && $user->addresses()->count() > 0)
+                        <div class="mb-3">
+                            <label for="address_id" class="form-label">Saved Addresses</label>
+                            <select id="address_id" name="address_id" class="form-select">
+                                <option value="">Use new address</option>
+                                @foreach($user->addresses as $addr)
+                                    <option value="{{ $addr->id }}" data-address="{{ htmlentities($addr->address) }}" data-phone="{{ e($addr->phone) }}" {{ old('address_id') == $addr->id ? 'selected' : '' }}>{{ $addr->label ?: 'Address '. $addr->id }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function(){
+                            var sel = document.getElementById('address_id');
+                            if(!sel) return;
+                            if(sel.value){
+                                var opt = sel.options[sel.selectedIndex];
+                                var addr = opt.getAttribute('data-address');
+                                var phone = opt.getAttribute('data-phone');
+                                if(addr) document.getElementById('shipping_address').value = addr;
+                                if(phone) {
+                                    var phoneEl = document.getElementById('shipping_phone');
+                                    if(phoneEl) phoneEl.value = phone;
+                                }
+                            }
+                            sel.addEventListener('change', function(){
+                                var opt = sel.options[sel.selectedIndex];
+                                var addr = opt.getAttribute('data-address');
+                                var phone = opt.getAttribute('data-phone');
+                                if(addr) document.getElementById('shipping_address').value = addr;
+                                if(phone) {
+                                    var phoneEl = document.getElementById('shipping_phone');
+                                    if(phoneEl) phoneEl.value = phone;
+                                }
+                            });
+                        });
+                    </script>
+
+                    <!-- make sure there are fields for manual input if user isn't using a saved address -->
+                    <div class="mb-3">
+                        <label for="shipping_address" class="form-label">Shipping Address</label>
+                        <textarea name="shipping_address" id="shipping_address" class="form-control" rows="3" required>{{ old('shipping_address') }}</textarea>
+                        @error('shipping_address')<div class="text-danger small">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label for="shipping_phone" class="form-label">Phone</label>
+                        <input type="text" name="shipping_phone" id="shipping_phone" class="form-control" value="{{ old('shipping_phone') }}" required>
+                        @error('shipping_phone')<div class="text-danger small">{{ $message }}</div>@enderror
+                    </div>
+
+                    <h6>Payment Method</h6
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="payment_method" id="online" value="online" required>

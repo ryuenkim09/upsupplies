@@ -49,13 +49,27 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled'
+            // include shipped since it appears in the dropdown
+            'status' => 'required|in:pending,processing,shipped,completed,cancelled'
         ]);
-        $order->status = $validated['status'];
+        $oldStatus = $order->status;
+        $newStatus = $validated['status'];
+        $order->status = $newStatus;
         
         // If marking a COD order as completed, auto-mark payment as paid
-        if ($validated['status'] === 'completed' && $order->payment_method === 'cod') {
+        if ($newStatus === 'completed' && $order->payment_method === 'cod') {
             $order->payment_status = 'paid';
+        }
+
+        // decrement stock once when the order is first shipped/completed
+        if (!in_array($oldStatus, ['shipped','completed']) && in_array($newStatus, ['shipped','completed'])) {
+            foreach ($order->items as $item) {
+                $product = $item->product;
+                if ($product && $item->quantity > 0) {
+                    $product->stock = max(0, $product->stock - $item->quantity);
+                    $product->save();
+                }
+            }
         }
         
         $order->save();

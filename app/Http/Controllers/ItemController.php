@@ -67,7 +67,8 @@ class ItemController extends Controller
             return Redirect::back()->with('error', 'Product not found');
         }
 
-        $quantity = $request->input('quantity', 1);
+        // ensure quantity is a positive integer
+        $quantity = max(1, (int)$request->input('quantity', 1));
         $action = $request->input('action', 'add');
 
         $cartItem = CartItem::firstOrNew([
@@ -80,7 +81,7 @@ class ItemController extends Controller
 
         // if "Buy Now" redirect to checkout, otherwise to cart
         if ($action === 'buyNow') {
-            return Redirect::route('getCart');
+            return Redirect::route('getCart')->withInput();
         }
 
         return Redirect::route('getItems')->with('success', 'Item added to cart');
@@ -108,6 +109,7 @@ class ItemController extends Controller
                 'price' => $prod->price,
                 'quantity' => $ci->quantity,
                 'product_id' => $prod->id,
+                'stock' => $prod->stock,
             ];
         });
 
@@ -125,13 +127,31 @@ class ItemController extends Controller
                 $cartItem->save();
             }
         }
-        return Redirect::route('getCart');
+        return Redirect::route('getCart')->withInput();
     }
 
     public function getRemoveItem($id)
     {
         CartItem::where('user_id', Auth::id())->where('product_id', $id)->delete();
-        return Redirect::route('getCart');
+        return Redirect::route('getCart')->withInput();
+    }
+
+    public function updateCartQuantity(Request $request, $id)
+    {
+        $quantity = $request->input('quantity', 1);
+        $quantity = max(1, intval($quantity));
+        
+        $product = Product::find($id);
+        if (!$product || $quantity > $product->stock) {
+            return Redirect::back()->with('error', 'Invalid quantity');
+        }
+
+        $cartItem = CartItem::where('user_id', Auth::id())->where('product_id', $id)->first();
+        if ($cartItem) {
+            $cartItem->quantity = $quantity;
+            $cartItem->save();
+        }
+        return Redirect::route('getCart')->withInput();
     }
 
     public function postCheckout(Request $request)
@@ -145,6 +165,7 @@ class ItemController extends Controller
             return Redirect::route('admin.dashboard.index')->with('error', 'Administrators cannot checkout');
         }
         $request->validate([
+            'selected_items' => ['required', 'array', 'min:1'],
             'address_id' => ['nullable','integer','exists:user_addresses,id'],
             'shipping_address' => ['required_without:address_id', 'string', 'max:2000'],
             'shipping_phone' => ['required_without:address_id','string','max:50'],
@@ -152,9 +173,14 @@ class ItemController extends Controller
             'save_address' => ['nullable','boolean'],
         ]);
 
-        $oldCart = CartItem::where('user_id', Auth::id())->get();
+        $selectedProductIds = $request->input('selected_items', []);
+        if (empty($selectedProductIds)) {
+            return Redirect::route('getCart')->with('error', 'Please select at least one item to checkout');
+        }
+
+        $oldCart = CartItem::where('user_id', Auth::id())->whereIn('product_id', $selectedProductIds)->get();
         if ($oldCart->isEmpty()) {
-            return \redirect()->route('getCart');
+            return \redirect()->route('getCart')->with('error', 'No items selected');
         }
 
         try {
@@ -220,12 +246,11 @@ class ItemController extends Controller
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
                 ]);
-
-                $product->decrement('stock', $item->quantity);
+                // stock will decrement when admin changes status to shipped/completed
             }
 
             DB::table('orders')->where('id', $orderId)->update(['total' => $total, 'updated_at' => Carbon::now()]);
-            DB::table('cart_items')->where('user_id', Auth::id())->delete();
+            CartItem::where('user_id', Auth::id())->whereIn('product_id', $selectedProductIds)->delete();
         } catch (\Exception $e) {
             DB::rollback();
             return \redirect()->route('getCart')->with('error', $e->getMessage());

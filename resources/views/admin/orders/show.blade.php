@@ -8,10 +8,10 @@
             <h5>Customer Information</h5>
             <p><strong>Name:</strong> {{ $order->user?->name }}</p>
             <p><strong>Email:</strong> {{ $order->user?->email }}</p>
-            <p><strong>Phone:</strong> {{ $order->user?->phone ?? 'N/A' }}</p>
+            <p><strong>Phone:</strong> {{ $order->shipping_phone ?? $order->user?->phone ?? 'N/A' }}</p>
             <p><strong>Delivery Address:</strong></p>
             <div style="background:#f5f0e8; padding:10px; border-radius:5px;">
-                {{ $order->user?->address ?? 'No address provided' }}
+                {{ $order->shipping_address ?? $order->user?->address ?? 'No address provided' }}
             </div>
         </div>
         <div class="col-md-6">
@@ -73,6 +73,9 @@
             </select>
             <button class="btn btn-primary">Update</button>
         </div>
+        @error('status')
+            <div class="text-danger small mt-1">{{ $message }}</div>
+        @enderror
     </form>
 
     <h2>Items</h2>
