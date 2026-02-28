@@ -1,0 +1,45 @@
+MAILTRAP SETUP INSTRUCTIONS
+============================
+
+To integrate MailTrap for email notifications:
+
+1. CREATE A MAILTRAP ACCOUNT
+   - Go to https://mailtrap.io
+   - Sign up for a free account
+   - Create a new inbox (e.g., "UpSupplies Development")
+
+2. GET YOUR MAILTRAP CREDENTIALS
+   - In your Mailtrap inbox, click "Integrations" → "Laravel"
+   - Copy your SMTP credentials
+
+3. UPDATE .env FILE
+   Replace the current MAIL_* settings with:
+
+   MAIL_MAILER=smtp
+   MAIL_HOST=smtp.mailtrap.io
+   MAIL_PORT=465
+   MAIL_USERNAME=your_mailtrap_username
+   MAIL_PASSWORD=your_mailtrap_password
+   MAIL_ENCRYPTION=tls
+   MAIL_FROM_ADDRESS="noreply@upsupplies.local"
+   MAIL_FROM_NAME="${APP_NAME}"
+
+4. CLEAR CONFIG CACHE (after updating .env)
+   php artisan config:cache
+
+5. TEST EMAIL SENDING
+   php artisan tinker
+   > Mail::raw('Test email', function($msg) { $msg->to('test@example.com'); });
+
+EMAILS CONFIGURED
+=================
+✓ Order Confirmation (OrderProcessedMail)
+  - Sent automatically after successful checkout
+  - Includes order details, items, total, and shipping address
+
+FUTURE ENHANCEMENTS
+===================
+- Order status update notifications (processing, shipped, delivered)
+- New product notifications for wishlist items
+- Password reset emails
+- Order cancellation notifications
